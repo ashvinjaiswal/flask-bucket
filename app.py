@@ -1,10 +1,12 @@
 from flask import Flask
-from flask import render_template, request, json
+from flask import render_template, request, redirect, json, session
 from flaskext.mysql import MySQL
 from werkzeug import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__)
+
+app.secret_key = 'why would I tell you my secret key?'
 
 #Make instace of mysql
 mysql = MySQL()
@@ -59,6 +61,46 @@ def signUp():
         cursor.close()
         conn.close()
 
+
+@app.route('/showSignin')
+def showSignin():
+    return render_template('signin.html')
+
+@app.route('/validateLogin',methods=['POST'])
+def validateLogin():
+    try:
+        _username = request.form['inputEmail']
+        _password = request.form['inputPassword']
+
+        # connect to mysql
+        con = mysql.connect()
+        cursor = con.cursor()
+        cursor.callproc('sp_validateLogin', (_username,))
+        data = cursor.fetchall()
+
+        if len(data) > 0:
+            if check_password_hash(str(data[0][3]),_password):
+                session['user'] = data[0][0]
+                return redirect('/userHome')
+            else:
+                return render_template('error.html', error='Wrong Email address or Password.')
+        else:
+            return render_template('error.html', error='Wrong Email address or Password.')
+    except Exception as e:
+        return render_template('error.html',error=str(e))
+    finally:
+        cursor.close()
+        con.close()
+
+@app.route('/logout')
+def logout():
+    session.pop('user',None)
+    return redirect('/')
+
+
+@app.route('/userHome')
+def userHome():
+    return render_template('userHome.html')
 
 if __name__ == "__main__":
     app.run()
