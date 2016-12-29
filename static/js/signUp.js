@@ -7,6 +7,7 @@ $(function(){
 			type: 'POST',
 			success: function(response){
 				console.log(response);
+				$('form')[0].reset();
 			},
 			error: function(error){
 				console.log(error);
